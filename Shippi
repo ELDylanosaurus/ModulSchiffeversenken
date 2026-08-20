@@ -1,14 +1,16 @@
-// Einfacher Ablauf: zu einer Station fliegen, 1 Eisen kaufen,
-// zur anderen Station fliegen, 1 Eisen verkaufen.
-// Start: node Shippi
 
-const SHIP_IP = "192.168.100.40"; // <-- ggf. anpassen (Cockpit oben rechts "Schiff:")
 
+const SHIP_IP = "192.168.100.40";
 const STEER_PORT = 2009;
 const COMM_PORT = 2011;
+const HOLD_PORT = 2012;
 
-const BUY_STATION = "Core Station";
-const SELL_STATION = "Azura Station";
+const BUY_STATION = "Azura Station";
+const SELL_STATION = "Core Station"; 
+const TARGET_STATION = "Vesta Station";
+
+const MIN_CREDITS = 60;
+const TARGET_IRON = 12;
 
 function url(port, path) {
   return `http://${SHIP_IP}:${port}${path}`;
@@ -30,10 +32,11 @@ async function postJson(port, path, body) {
 
 const setTarget = (target) => postJson(STEER_PORT, "/set_target", { target });
 const getStationsInReach = () => getJson(COMM_PORT, "/stations_in_reach");
-const buy = (station, what, amount) =>
-  postJson(COMM_PORT, "/buy", { station, what, amount });
-const sell = (station, what, amount) =>
-  postJson(COMM_PORT, "/sell", { station, what, amount });
+const getHold = () => getJson(HOLD_PORT, "/hold");
+const buyIron = (station, amount) =>
+  postJson(COMM_PORT, "/buy", { station, what: "IRON", amount });
+const sellIron = (station, amount) =>
+  postJson(COMM_PORT, "/sell", { station, what: "IRON", amount });
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -51,14 +54,33 @@ async function flyTo(station) {
 }
 
 async function main() {
-  await flyTo(BUY_STATION);
-  console.log("Kaufe 1x IRON ...", await buy(BUY_STATION, "IRON", 1));
+  let hold = await getHold();
+  while (hold.hold.credits < MIN_CREDITS) {
+    console.log(`Credits: ${hold.hold.credits}/${MIN_CREDITS}`);
 
-  await flyTo(SELL_STATION);
-  console.log("Verkaufe 1x IRON ...", await sell(SELL_STATION, "IRON", 1));
+    await flyTo(BUY_STATION);
+    console.log("Kaufe 1x IRON ...", await buyIron(BUY_STATION, 1));
 
+    await flyTo(SELL_STATION);
+    console.log("Verkaufe 1x IRON ...", await sellIron(SELL_STATION, 1));
+
+    hold = await getHold();
+  }
+  console.log(`${MIN_CREDITS}+ Credits erreicht (${hold.hold.credits}).`);
+
+  while ((hold.hold.resources.IRON || 0) < TARGET_IRON) {
+    console.log(`Eisen: ${hold.hold.resources.IRON || 0}/${TARGET_IRON}`);
+
+    await flyTo(BUY_STATION);
+    console.log("Kaufe 1x IRON ...", await buyIron(BUY_STATION, 1));
+
+    hold = await getHold();
+  }
+  console.log(`${TARGET_IRON} Eisen erreicht.`);
+
+  await flyTo(TARGET_STATION);
   await setTarget("stop");
-  console.log("Fertig!");
+  console.log("Bei Vesta Station angedockt. Fertig!");
 }
 
 main();
