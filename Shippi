@@ -1,11 +1,4 @@
-// Ablauf:
-// 1. Zwischen Core Station (verkaufen) und Azura Station (kaufen) pendeln,
-//    bis mindestens 60 Credits im Hold sind.
-// 2. Danach nur noch bei Azura Station Eisen kaufen, bis 12 Eisen im Hold sind.
-// 3. Zur Vesta Station fliegen und andocken.
-// Start: node Shippi
-
-const SHIP_IP = "192.168.100.40"; // <-- ggf. anpassen (Cockpit oben rechts "Schiff:")
+const SHIP_IP = "192.168.100.40"; 
 
 const NAV_PORT = 2010;
 const STEER_PORT = 2009;
