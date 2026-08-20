@@ -1,0 +1,64 @@
+// Einfacher Ablauf: zu einer Station fliegen, 1 Eisen kaufen,
+// zur anderen Station fliegen, 1 Eisen verkaufen.
+// Start: node Shippi
+
+const SHIP_IP = "192.168.100.40"; // <-- ggf. anpassen (Cockpit oben rechts "Schiff:")
+
+const STEER_PORT = 2009;
+const COMM_PORT = 2011;
+
+const BUY_STATION = "Core Station";
+const SELL_STATION = "Azura Station";
+
+function url(port, path) {
+  return `http://${SHIP_IP}:${port}${path}`;
+}
+
+async function getJson(port, path) {
+  const res = await fetch(url(port, path));
+  return res.json();
+}
+
+async function postJson(port, path, body) {
+  const res = await fetch(url(port, path), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return res.json();
+}
+
+const setTarget = (target) => postJson(STEER_PORT, "/set_target", { target });
+const getStationsInReach = () => getJson(COMM_PORT, "/stations_in_reach");
+const buy = (station, what, amount) =>
+  postJson(COMM_PORT, "/buy", { station, what, amount });
+const sell = (station, what, amount) =>
+  postJson(COMM_PORT, "/sell", { station, what, amount });
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function flyTo(station) {
+  console.log(`Fliege zu ${station} ...`);
+  await setTarget(station);
+  while (true) {
+    await sleep(2000);
+    const { stations } = await getStationsInReach();
+    if (stations[station]) {
+      console.log(`Angekommen bei ${station}.`);
+      return;
+    }
+  }
+}
+
+async function main() {
+  await flyTo(BUY_STATION);
+  console.log("Kaufe 1x IRON ...", await buy(BUY_STATION, "IRON", 1));
+
+  await flyTo(SELL_STATION);
+  console.log("Verkaufe 1x IRON ...", await sell(SELL_STATION, "IRON", 1));
+
+  await setTarget("stop");
+  console.log("Fertig!");
+}
+
+main();
