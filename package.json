@@ -1,0 +1,24 @@
+{
+  "dependencies": {
+    "amqplib": "^2.0.1"
+  },
+  "name": "modulschiffeversenken",
+  "version": "1.0.0",
+  "description": "",
+  "main": "mission1.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ELDylanosaurus/ModulSchiffeversenken.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ELDylanosaurus/ModulSchiffeversenken/issues"
+  },
+  "homepage": "https://github.com/ELDylanosaurus/ModulSchiffeversenken#readme"
+}
