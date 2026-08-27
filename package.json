@@ -1,13 +1,16 @@
 {
-  "dependencies": {
-    "amqplib": "^2.0.1"
-  },
   "name": "modulschiffeversenken",
   "version": "1.0.0",
   "description": "",
-  "main": "mission1.js",
+  "type": "module",
+  "main": "src/missions/mission1.js",
   "scripts": {
+    "mission1": "node src/missions/mission1.js",
+    "mission2": "node src/missions/mission2.js",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "amqplib": "^2.0.1"
   },
   "repository": {
     "type": "git",
@@ -16,7 +19,6 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/ELDylanosaurus/ModulSchiffeversenken/issues"
   },
