@@ -7,6 +7,7 @@
   "scripts": {
     "mission1": "node src/missions/mission1.js",
     "mission2": "node src/missions/mission2.js",
+    "mission3": "node src/missions/mission3.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
