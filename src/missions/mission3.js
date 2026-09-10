@@ -1,8 +1,8 @@
 import { flyToStation } from "../ship.js";
 import { startRelay, sendToPeer } from "../relay.js";
 
-const MY_STATION = "Elyse Terminal";      
-const PEER_HOST = "192.168.100.40";      
+const MY_STATION = "Shangris Station";      
+const PEER_HOST = "192.168.100.41";      
 const PEER_PORT = 5000;                   
 const LISTEN_PORT = 5000;                
 

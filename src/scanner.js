@@ -1,6 +1,6 @@
 ﻿import amqp from "amqplib";
 
-const RABBITMQ_URL = "amqp://guest:guest@192.168.100.41:2014";
+const RABBITMQ_URL = "amqp://guest:guest@192.168.100.40:2014";
 const EXCHANGE = "scanner/detected_objects";
 
 export async function listenToScanner(callback) {

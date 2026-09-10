@@ -1,4 +1,4 @@
-const SHIP_IP = "192.168.100.41";
+const SHIP_IP = "192.168.100.40";
 
 const NAV_PORT = 2010;
 const STEER_PORT = 2009;
