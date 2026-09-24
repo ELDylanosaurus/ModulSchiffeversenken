@@ -6,7 +6,7 @@ an die andere VM weiter.
 
 | | Dylan | Kollege |
 |---|---|---|
-| VM-IP | `192.168.100.40` | `<KOLLEGEN-IP>` (mit `hostname -I` auf der VM nachschauen) |
+| VM-IP | `192.168.100.40` | `192.168.100.41` |
 | Station | **Elyse Terminal** | **Shangris Station** |
 | Flugzeit | ca. 1 Stunde | ca. 3–4 Minuten |
 
@@ -19,8 +19,16 @@ an die andere VM weiter.
 
 Vom Laptop aus (PowerShell):
 
+**Dylan:**
+
 ```bash
-ssh ship@<EIGENE-VM-IP>
+ssh ship@192.168.100.40
+```
+
+**Kollege:**
+
+```bash
+ssh ship@192.168.100.41
 ```
 
 ## Schritt 2 – Node.js prüfen (muss 22 oder neuer sein)
@@ -52,22 +60,12 @@ cd ~/ModulSchiffeversenken
 git pull
 ```
 
-## Schritt 4 – IP der anderen VM austauschen
-
-Auf beiden VMs:
-
-```bash
-hostname -I
-```
-
-Die `192.168.100.x`-Adresse der **anderen** VM braucht ihr gleich im Befehl.
-
-## Schritt 5 – Starten
+## Schritt 4 – Starten
 
 **Dylan (Elyse, zuerst starten wegen langer Flugzeit):**
 
 ```bash
-SHIP_IP=127.0.0.1 node src/missions/mission3.js elyse <KOLLEGEN-IP>
+SHIP_IP=127.0.0.1 node src/missions/mission3.js elyse 192.168.100.41
 ```
 
 **Kollege (Shangris):**
@@ -80,7 +78,7 @@ Der Kollege kann auch direkt starten. Sein Schiff wartet dann an der
 Shangris Station, bis Elyse da ist. Die Reihenfolge ist egal, das Script
 stösst die Kommunikation automatisch neu an.
 
-## Schritt 6 – Laufen lassen und kontrollieren
+## Schritt 5 – Laufen lassen und kontrollieren
 
 Im Terminal sollte etwa Folgendes erscheinen:
 
@@ -94,10 +92,12 @@ Angekommen, halte Position
 [relay] -> 192.168.100.40: ...
 ```
 
-Im Cockpit (`http://<VM-IP>:2000` im Browser) müssen **beide** Zähler auf
-`20s / 20s` hochlaufen. Beide Scripts müssen **gleichzeitig** laufen.
+Im Cockpit müssen **beide** Zähler auf `20s / 20s` hochlaufen:
 
-Danach mit `Ctrl+C` beenden.
+- Dylan: `http://192.168.100.40:2000`
+- Kollege: `http://192.168.100.41:2000`
+
+Beide Scripts müssen **gleichzeitig** laufen. Danach mit `Ctrl+C` beenden.
 
 ---
 
@@ -107,7 +107,7 @@ Danach mit `Ctrl+C` beenden.
 |---|---|
 | `Cannot find module ... Ship.js` | `git pull` machen, alter Stand |
 | `WebSocket is not defined` | Node ist zu alt → Schritt 2 |
-| `[relay] Peer nicht erreichbar` | Andere VM läuft noch nicht, oder falsche IP. Test: `curl -v http://<ANDERE-IP>:5000/` → `405` heisst erreichbar |
+| `[relay] Peer nicht erreichbar` | Andere VM läuft noch nicht. Test von Dylans VM: `curl -v http://192.168.100.41:5000/`, vom Kollegen: `curl -v http://192.168.100.40:5000/` → `405` heisst erreichbar |
 | `nicht verbunden, Nachricht verworfen` | WebSocket zur Station ist noch nicht offen, das Script verbindet sich selbst neu |
 | Bleibt bei `Fliege zu ...` hängen | Schiff ist noch unterwegs (Elyse ca. 1 h), einfach warten |
 | `EADDRINUSE ... 5000` | Das Script läuft schon in einem anderen Terminal → dort beenden |
