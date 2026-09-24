@@ -3,7 +3,8 @@ import http from "node:http";
 // Relay zwischen den beiden Schiff-VMs (Ports >= 5000).
 // Format: { from: <Stationsname>, payload: <Inhalt unverändert> }
 
-export const RELAY_PORT = 5000;
+// Muss auf beiden VMs gleich sein. Ausweichen z.B. mit RELAY_PORT=5001
+export const RELAY_PORT = Number(process.env.RELAY_PORT ?? 5000);
 const HTTP_TIMEOUT_MS = 2000;
 
 export function startRelay(onMessage, port = RELAY_PORT) {
