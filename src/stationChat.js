@@ -1,7 +1,6 @@
 const RECONNECT_DELAY_MS = 2000;
 const CONNECT_TIMEOUT_MS = 15000;
 
-// Die Nachrichten sind lange Byte-Listen - nur den Anfang loggen
 function short(payload) {
     const text = JSON.stringify(payload);
     return text.length > 60 ? `${text.slice(0, 60)}...` : text;
