@@ -1,6 +1,12 @@
 const RECONNECT_DELAY_MS = 2000;
 const CONNECT_TIMEOUT_MS = 15000;
 
+// Die Nachrichten sind lange Byte-Listen - nur den Anfang loggen
+function short(payload) {
+    const text = JSON.stringify(payload);
+    return text.length > 60 ? `${text.slice(0, 60)}...` : text;
+}
+
 export async function connectToStation(name, wsUrl, field, onPayload) {
     let socket = null;
     let markReady;
@@ -30,7 +36,7 @@ export async function connectToStation(name, wsUrl, field, onPayload) {
                 console.log(`[${name}] ohne '${field}': ${event.data}`);
                 return;
             }
-            console.log(`[${name}] <- ${JSON.stringify(payload)}`);
+            console.log(`[${name}] <- ${short(payload)}`);
             onPayload(payload);
         });
 
@@ -57,6 +63,6 @@ export async function connectToStation(name, wsUrl, field, onPayload) {
             return;
         }
         socket.send(JSON.stringify({ source, [field]: payload }));
-        console.log(`[${name}] -> ${JSON.stringify(payload)}`);
+        console.log(`[${name}] -> ${short(payload)}`);
     };
 }

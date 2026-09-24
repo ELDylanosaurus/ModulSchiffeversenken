@@ -27,7 +27,7 @@ const STATIONS = {
 };
 
 const START_SEED = [1, 2, 3, 4];
-const MAX_SILENCE_MS = 3000;
+const STATUS_INTERVAL_MS = 5000;
 
 const station = STATIONS[process.argv[2]];
 const peerIp = process.argv[3];
@@ -44,34 +44,22 @@ await waitUntilInReach(station.name);
 await setTarget("stop");
 console.log("Angekommen, halte Position");
 
-let lastForward = Date.now();
-
 // Station -> andere VM
 const sendToStation = await connectToStation(
     station.name,
     station.wsUrl,
     station.field,
-    (payload) => {
-        lastForward = Date.now();
-        sendToPeer(peerIp, station.name, payload);
-    }
+    (payload) => sendToPeer(peerIp, station.name, payload)
 );
 
 // andere VM -> Station
-startRelay((message) => {
-    lastForward = Date.now();
-    sendToStation(message.payload, message.from);
-});
+startRelay((message) => sendToStation(message.payload, message.from));
 
 sendToStation(START_SEED, station.partner);
 
-// Falls die Kette abreisst (z.B. andere VM war noch nicht bereit): neu anstossen
+// Läuft, bis man es mit Ctrl+C beendet - so überlappen sich beide VMs sicher
+const startedAt = Date.now();
 setInterval(() => {
-    if (Date.now() - lastForward > MAX_SILENCE_MS) {
-        console.log("Keine Weiterleitung seit 3s - sende Startnachricht erneut");
-        lastForward = Date.now();
-        sendToStation(START_SEED, station.partner);
-    }
-}, 1000);
-
-console.log("Relay läuft - beenden mit Ctrl+C");
+    const seconds = Math.round((Date.now() - startedAt) / 1000);
+    console.log(`verbunden seit ${seconds}s (beenden mit Ctrl+C)`);
+}, STATUS_INTERVAL_MS);

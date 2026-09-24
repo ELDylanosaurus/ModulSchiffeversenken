@@ -44,7 +44,7 @@ export async function sendToPeer(peerIp, source, payload, port = RELAY_PORT) {
             body: JSON.stringify({ from: source, payload }),
             signal: AbortSignal.timeout(HTTP_TIMEOUT_MS)
         });
-        console.log(`[relay] -> ${peerIp}: ${JSON.stringify(payload)}`);
+        console.log(`[relay] -> ${peerIp}: ${JSON.stringify(payload).length} Zeichen`);
     } catch (error) {
         console.log(`[relay] Peer nicht erreichbar: ${error.message}`);
     }
