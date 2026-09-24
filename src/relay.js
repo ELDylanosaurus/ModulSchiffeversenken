@@ -1,7 +1,12 @@
 import http from "node:http";
 
+// Relay zwischen den beiden Schiff-VMs (Ports >= 5000).
+// Format: { from: <Stationsname>, payload: <Inhalt unverändert> }
 
-export function startRelay(port, onMessage) {
+export const RELAY_PORT = 5000;
+const HTTP_TIMEOUT_MS = 2000;
+
+export function startRelay(onMessage, port = RELAY_PORT) {
     const server = http.createServer((request, response) => {
         if (request.method !== "POST") {
             response.writeHead(405).end();
@@ -12,40 +17,35 @@ export function startRelay(port, onMessage) {
         request.on("data", (chunk) => {
             body += chunk;
         });
-        request.on("end", async () => {
+        request.on("end", () => {
+            response.writeHead(200).end();
             try {
-                const message = JSON.parse(body);
-                await onMessage(message);
-                response.writeHead(200, {
-                    "Content-Type": "application/json"
-                });
-                response.end(JSON.stringify({ ok: true }));
-            } catch (error) {
-                response.writeHead(400).end(
-                    JSON.stringify({ error: String(error) })
-                );
+                onMessage(JSON.parse(body));
+            } catch {
+                console.log(`[relay] kein JSON: ${body}`);
             }
         });
     });
 
-    server.listen(port, () => {
-        console.log(`Relay hört auf Port ${port}`);
+    server.listen(port, "0.0.0.0", () => {
+        console.log(`[relay] hört auf Port ${port}`);
     });
 
     return server;
 }
 
-export async function sendToPeer(host, port, message) {
+export async function sendToPeer(peerIp, source, payload, port = RELAY_PORT) {
     try {
-        const response = await fetch(`http://${host}:${port}/`, {
+        await fetch(`http://${peerIp}:${port}/message`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify(message)
+            body: JSON.stringify({ from: source, payload }),
+            signal: AbortSignal.timeout(HTTP_TIMEOUT_MS)
         });
-        return response.json();
+        console.log(`[relay] -> ${peerIp}: ${JSON.stringify(payload)}`);
     } catch (error) {
-        console.error("Peer nicht erreichbar:", error.message);
+        console.log(`[relay] Peer nicht erreichbar: ${error.message}`);
     }
 }

@@ -1,5 +1,5 @@
 ﻿import { listenToScanner } from "../scanner.js";
-import { setTarget } from "../ship.js";
+import { setTarget } from "../Ship.js";
 
 const TARGET = "G-Station 0-4";
 

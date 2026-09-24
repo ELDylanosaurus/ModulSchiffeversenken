@@ -1,4 +1,5 @@
-const SHIP_IP = "192.168.100.40";
+// Auf der VM selbst: SHIP_IP=127.0.0.1 setzen
+export const SHIP_IP = process.env.SHIP_IP ?? "192.168.100.40";
 
 const NAV_PORT = 2010;
 const STEER_PORT = 2009;
@@ -74,6 +75,18 @@ export async function flyToStation(station) {
             console.log(`Angekommen bei ${station}`);
             return;
         }
+    }
+}
+
+// Wartet, bis die Station in Reichweite ist (für Stationen, die das
+// Schiff nicht per Namen kennt -> vorher per Koordinaten anfliegen).
+export async function waitUntilInReach(station) {
+    while (true) {
+        const result = await getStations();
+        if (result.stations[station]) {
+            return result.stations[station];
+        }
+        await sleep(2000);
     }
 }
 

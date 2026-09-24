@@ -1,68 +1,77 @@
-import { flyToStation } from "../ship.js";
+// Aufgabe 3: Kommunikation zwischen Elyse Terminal und Shangris Station.
+// Läuft auf den VMs (nur dort sind Ports >= 5000 zwischen den Schiffen offen).
+//
+// Aufruf auf der jeweiligen VM:
+//   SHIP_IP=127.0.0.1 node src/missions/mission3.js elyse    <IP der Shangris-VM>
+//   SHIP_IP=127.0.0.1 node src/missions/mission3.js shangris <IP der Elyse-VM>
+
+import { SHIP_IP, setTarget, waitUntilInReach } from "../Ship.js";
 import { startRelay, sendToPeer } from "../relay.js";
+import { connectToStation } from "../stationChat.js";
 
-const MY_STATION = "Shangris Station";      
-const PEER_HOST = "192.168.100.41";      
-const PEER_PORT = 5000;                   
-const LISTEN_PORT = 5000;                
-
-const RUN_MS = 60_000;                    
-const FORWARD_INTERVAL_MS = 2000;         
-
-const SHIP_IP = "192.168.100.40";
-const COMM_PORT = 2011;
-
-async function readFromStation(station) {
-    const response = await fetch(
-        `http://${SHIP_IP}:${COMM_PORT}/messages` +
-        `?station=${encodeURIComponent(station)}`
-    );
-    const data = await response.json();
-    return data.messages ?? [];
-}
-
-async function writeToStation(station, message) {
-    await fetch(`http://${SHIP_IP}:${COMM_PORT}/send`, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ station, message })
-    });
-}
-
-function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function main() {
-    await flyToStation(MY_STATION);
-
-    startRelay(LISTEN_PORT, async (message) => {
-        console.log("von Peer erhalten:", message);
-        await writeToStation(MY_STATION, message);
-    });
-
-    const stopAt = Date.now() + RUN_MS;
-    while (Date.now() < stopAt) {
-        const outgoing = await readFromStation(MY_STATION);
-
-        if (outgoing.length > 0) {
-            for (const msg of outgoing) {
-                await sendToPeer(PEER_HOST, PEER_PORT, msg);
-            }
-        } else {
-            await sendToPeer(PEER_HOST, PEER_PORT, {
-                type: "keepalive",
-                from: MY_STATION,
-                t: Date.now()
-            });
-        }
-
-        await sleep(FORWARD_INTERVAL_MS);
+const STATIONS = {
+    elyse: {
+        name: "Elyse Terminal",
+        wsUrl: `ws://${SHIP_IP}:2026/api`,
+        field: "msg",
+        coordinates: { x: -70565, y: 72811 },
+        partner: "Shangris Station"
+    },
+    shangris: {
+        name: "Shangris Station",
+        wsUrl: `ws://${SHIP_IP}:2025/ws`,
+        field: "data",
+        coordinates: { x: 4446, y: 4340 },
+        partner: "Elyse Terminal"
     }
+};
 
-    console.log("Kommunikation beendet");
+const START_SEED = [1, 2, 3, 4];
+const MAX_SILENCE_MS = 3000;
+
+const station = STATIONS[process.argv[2]];
+const peerIp = process.argv[3];
+
+if (!station || !peerIp) {
+    console.log("Aufruf: node src/missions/mission3.js <elyse|shangris> <IP der anderen VM>");
+    process.exit(1);
 }
 
-main();
+// Die Namen kennt das Schiff nicht -> per Koordinaten anfliegen
+console.log(`Fliege zu ${station.name} ...`);
+await setTarget(station.coordinates);
+await waitUntilInReach(station.name);
+await setTarget("stop");
+console.log("Angekommen, halte Position");
+
+let lastForward = Date.now();
+
+// Station -> andere VM
+const sendToStation = await connectToStation(
+    station.name,
+    station.wsUrl,
+    station.field,
+    (payload) => {
+        lastForward = Date.now();
+        sendToPeer(peerIp, station.name, payload);
+    }
+);
+
+// andere VM -> Station
+startRelay((message) => {
+    lastForward = Date.now();
+    sendToStation(message.payload, message.from);
+});
+
+sendToStation(START_SEED, station.partner);
+
+// Falls die Kette abreisst (z.B. andere VM war noch nicht bereit): neu anstossen
+setInterval(() => {
+    if (Date.now() - lastForward > MAX_SILENCE_MS) {
+        console.log("Keine Weiterleitung seit 3s - sende Startnachricht erneut");
+        lastForward = Date.now();
+        sendToStation(START_SEED, station.partner);
+    }
+}, 1000);
+
+console.log("Relay läuft - beenden mit Ctrl+C");

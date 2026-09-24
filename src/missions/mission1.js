@@ -4,7 +4,7 @@
     getHold,
     buy,
     sell
-} from "../ship.js";
+} from "../Ship.js";
 
 
 const BUY_STATION = "Azura Station";
