@@ -1,0 +1,98 @@
+# MongoDB für den Schildgenerator, läuft im k3s der VM.
+#
+# Starten:   sudo k3s kubectl apply -f mongo/mongo.yaml
+# Prüfen:    sudo k3s kubectl -n theship-mongo get pods,svc
+# Entfernen: sudo k3s kubectl delete -f mongo/mongo.yaml
+#
+# Der Schildgenerator verbindet sich mit
+#   mongodb://theship:theship1234@<VM-IP>:2021/theshipdb
+
+# Eigener Namespace, getrennt von den Schiffs-Komponenten (theship-vendor)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: theship-mongo
+---
+# Wird beim ersten Start der Datenbank ausgeführt und legt den Benutzer
+# "theship" in der Datenbank "theshipdb" an
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-init
+  namespace: theship-mongo
+data:
+  init-theship.js: |
+    db.getSiblingDB("theshipdb").createUser({
+        user: "theship",
+        pwd: "theship1234",
+        roles: [{ role: "readWrite", db: "theshipdb" }]
+    });
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongo
+  namespace: theship-mongo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mongo
+  template:
+    metadata:
+      labels:
+        app: mongo
+    spec:
+      containers:
+        - name: mongo
+          # 4.4 läuft auch auf CPUs ohne AVX (neuere Versionen nicht)
+          image: mongo:4.4
+          ports:
+            - containerPort: 27017
+          env:
+            # Admin-Benutzer -> schaltet die Anmeldung ein
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: admin
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: admin1234
+          volumeMounts:
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+            - name: data
+              mountPath: /data/db
+          # Pod gilt erst als bereit, wenn der Login mit theship klappt
+          readinessProbe:
+            exec:
+              command:
+                - mongo
+                - --quiet
+                - mongodb://theship:theship1234@127.0.0.1:27017/theshipdb
+                - --eval
+                - db.runCommand({ ping: 1 }).ok
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: init
+          configMap:
+            name: mongo-init
+        # Daten leben nur so lange wie der Pod. Reicht hier: mission4.js
+        # schreibt das Dokument laufend neu, und bei jedem Neustart wird
+        # der Benutzer frisch angelegt.
+        - name: data
+          emptyDir: {}
+---
+# Macht die Datenbank auf Port 2021 der VM erreichbar
+# (k3s ServiceLB, wie bei traefik)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: theship-mongo
+spec:
+  type: LoadBalancer
+  selector:
+    app: mongo
+  ports:
+    - name: mongo
+      port: 2021
+      targetPort: 27017
