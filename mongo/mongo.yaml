@@ -63,12 +63,13 @@ spec:
           # Pod gilt erst als bereit, wenn der Login mit theship klappt
           readinessProbe:
             exec:
+              # In Anführungszeichen, sonst liest YAML "ping: 1" als Objekt
               command:
-                - mongo
-                - --quiet
-                - mongodb://theship:theship1234@127.0.0.1:27017/theshipdb
-                - --eval
-                - db.runCommand({ ping: 1 }).ok
+                - "mongo"
+                - "--quiet"
+                - "mongodb://theship:theship1234@127.0.0.1:27017/theshipdb"
+                - "--eval"
+                - "db.runCommand({ ping: 1 }).ok"
             initialDelaySeconds: 5
             periodSeconds: 5
       volumes:
