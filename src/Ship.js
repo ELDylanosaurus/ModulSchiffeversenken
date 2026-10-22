@@ -1,5 +1,5 @@
 // Auf der VM selbst: SHIP_IP=127.0.0.1 setzen
-export const SHIP_IP = process.env.SHIP_IP ?? "192.168.100.40";
+export const SHIP_IP = process.env.SHIP_IP ?? "192.168.100.41";
 
 const NAV_PORT = 2010;
 const STEER_PORT = 2009;
