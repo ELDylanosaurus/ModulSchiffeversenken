@@ -1,7 +1,5 @@
 import { SHIP_IP } from "./Ship.js";
 
-// Vakuumenergie-Sensor: Messung anstossen, warten bis fertig, Ergebnis
-// holen und die Messung wieder löschen (sonst läuft der Speicher voll).
 const SENSOR = `http://${SHIP_IP}:2037`;
 const POLL_MS = 500;
 const MAX_WAIT_MS = 30000;
@@ -10,7 +8,6 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Liefert das Messergebnis als Hex-String, z.B. "badf00d"
 export async function measure() {
     const id = `measurement_${Date.now()}`;
 
@@ -41,7 +38,6 @@ export async function measure() {
         }
         throw new Error(`Messung ${id} nach ${MAX_WAIT_MS / 1000}s nicht fertig`);
     } finally {
-        // Immer aufräumen, auch wenn etwas schiefging
         await fetch(`${SENSOR}/measurements/${id}`, { method: "DELETE" }).catch(() => {});
     }
 }

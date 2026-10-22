@@ -57,7 +57,7 @@ async function getStations() {
     return getJson(COMM_PORT, "/stations_in_reach");
 }
 
-async function getPosition() {
+export async function getPosition() {
     return getJson(NAV_PORT, "/pos");
 }
 
