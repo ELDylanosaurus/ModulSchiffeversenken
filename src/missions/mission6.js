@@ -1,16 +1,24 @@
-import { flyToPosition, getHold, setTarget, waitUntilInReach } from "../Ship.js";
+import { getHold, getPosition, setTarget, waitUntilInReach } from "../Ship.js";
 import { LOGIN_URL, activateLaser, deactivateLaser, getLaserState, setLaserAngle } from "../laser.js";
 
 const ARAKROCK = { x: -18236, y: -11783 };
+const MINING_DISTANCE = 50;
 const VESTA = { name: "Vesta Station", coordinates: { x: 7000, y: 7000 } };
 
-const ANGLE_STEP = 10;
-const SETTLE_MS = 1500;
 const POLL_MS = 2000;
 const LOGIN_RETRY_MS = 5000;
+const ARRIVAL_TOLERANCE = 40;
 
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function normalize(angle) {
+    return ((angle % 360) + 360) % 360;
+}
+
+function compassBearing(from, to) {
+    return Math.atan2(to.x - from.x, to.y - from.y) * 180 / Math.PI;
 }
 
 process.on("SIGINT", async () => {
@@ -19,71 +27,72 @@ process.on("SIGINT", async () => {
     process.exit(0);
 });
 
-async function loadedStone() {
-    const { hold } = await getHold();
-    return { stone: hold.resources.STONE ?? 0, free: hold.hold_free };
+async function flyTo(target) {
+    await setTarget(target);
+    while (true) {
+        await sleep(POLL_MS);
+        const { pos, velocity } = await getPosition();
+        const off = Math.hypot(pos.x - target.x, pos.y - target.y);
+        if (off < ARRIVAL_TOLERANCE && Math.hypot(velocity.x, velocity.y) < 0.5) {
+            return;
+        }
+    }
 }
 
-async function ensureActive() {
+async function miningSpot() {
+    const { pos } = await getPosition();
+    const dx = pos.x - ARAKROCK.x;
+    const dy = pos.y - ARAKROCK.y;
+    const distance = Math.hypot(dx, dy) || 1;
+    return {
+        x: ARAKROCK.x + dx / distance * MINING_DISTANCE,
+        y: ARAKROCK.y + dy / distance * MINING_DISTANCE
+    };
+}
+
+async function aimAtRock() {
+    const { pos } = await getPosition();
+    const angle = Math.round(normalize(compassBearing(pos, ARAKROCK) - pos.angle));
+    await setLaserAngle(angle);
+    return angle;
+}
+
+async function activate() {
     while (true) {
+        const result = await activateLaser();
+        await sleep(1000);
         const state = await getLaserState();
         if (state.is_active) {
             return;
         }
         if (state.is_cooling_down) {
+            console.log("[laser] kühlt ab ...");
             await sleep(POLL_MS);
             continue;
         }
-        const result = await activateLaser();
-        if (result.kind === "success") {
-            console.log("[laser] aktiviert");
-            return;
-        }
-        console.log(`[laser] Aktivieren fehlgeschlagen: ${result.message ?? JSON.stringify(result)}`);
-        console.log(`[laser] Bitte im Browser einloggen: ${LOGIN_URL}`);
+        console.log(`[laser] geht nicht an (${result.message ?? result.kind}) - bitte im Browser einloggen: ${LOGIN_URL}`);
         await sleep(LOGIN_RETRY_MS);
     }
 }
 
-async function findMiningAngle() {
-    for (let angle = 0; angle < 360; angle += ANGLE_STEP) {
-        await setLaserAngle(angle);
-        await sleep(SETTLE_MS);
-        const state = await getLaserState();
-        if (state.is_mining) {
-            console.log(`[laser] baut ab bei Winkel ${angle}°`);
-            return angle;
-        }
-    }
-    return null;
-}
-
 console.log("Fliege zu Arakrock ...");
-await flyToPosition(ARAKROCK);
-
-await ensureActive();
-let angle = await findMiningAngle();
-if (angle === null) {
-    console.log("[laser] kein Winkel gefunden, bei dem abgebaut wird");
-    await deactivateLaser();
-    process.exit(1);
-}
+await flyTo(await miningSpot());
+console.log(`Bei Arakrock, ${MINING_DISTANCE} Einheiten Abstand`);
 
 while (true) {
-    const { stone, free } = await loadedStone();
-    console.log(`[mining] Stein ${stone} | frei ${free}`);
-    if (free === 0) {
+    const { hold } = await getHold();
+    console.log(`[mining] Stein ${hold.resources.STONE ?? 0} | frei ${hold.hold_free}`);
+    if (hold.hold_free === 0) {
         break;
     }
 
     const state = await getLaserState();
     if (state.is_cooling_down) {
         console.log("[laser] kühlt ab ...");
-    } else if (!state.is_active) {
-        await ensureActive();
-        await setLaserAngle(angle);
     } else if (!state.is_mining) {
-        angle = (await findMiningAngle()) ?? angle;
+        const angle = await aimAtRock();
+        await activate();
+        console.log(`[laser] zielt mit ${angle}° auf Arakrock`);
     }
 
     await sleep(POLL_MS);
