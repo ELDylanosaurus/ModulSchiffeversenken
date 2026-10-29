@@ -10,6 +10,7 @@
     "mission3": "node src/missions/mission3.js",
     "mission4": "node src/missions/mission4.js",
     "mission5": "node src/missions/mission5.js",
+    "mission6": "node src/missions/mission6.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
